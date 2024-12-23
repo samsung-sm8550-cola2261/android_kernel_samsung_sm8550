@@ -4739,16 +4739,16 @@ pick_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *curr)
 				second = curr;
 		}
 
-		if (second && wakeup_preempt_entity(second, left) < 1)
+		if (second && (!left || wakeup_preempt_entity(second, left) < 1))
 			se = second;
 	}
 
-	if (cfs_rq->next && wakeup_preempt_entity(cfs_rq->next, left) < 1) {
+	if (cfs_rq->next && (!left || wakeup_preempt_entity(cfs_rq->next, left) < 1)) {
 		/*
 		 * Someone really wants this to run. If it's not unfair, run it.
 		 */
 		se = cfs_rq->next;
-	} else if (cfs_rq->last && wakeup_preempt_entity(cfs_rq->last, left) < 1) {
+	} else if (cfs_rq->last && (!left || wakeup_preempt_entity(cfs_rq->last, left) < 1)) {
 		/*
 		 * Prefer last buddy, try to return the CPU to a preempted task.
 		 */
@@ -7573,6 +7573,8 @@ again:
 		}
 
 		se = pick_next_entity(cfs_rq, curr);
+		if (unlikely(!se))
+			goto again;
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
 
@@ -7637,6 +7639,10 @@ again:
 		}
 
 		se = pick_next_entity(cfs_rq, curr);
+		if (unlikely(!se)) {
+			cfs_rq = &rq->cfs;
+			goto again;
+		}
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
 
@@ -7683,6 +7689,10 @@ simple:
 
 	do {
 		se = pick_next_entity(cfs_rq, NULL);
+		if (unlikely(!se)) {
+			cfs_rq = &rq->cfs;
+			goto again;
+		}
 		set_next_entity(cfs_rq, se);
 		cfs_rq = group_cfs_rq(se);
 	} while (cfs_rq);
